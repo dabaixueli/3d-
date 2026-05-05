@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 魔方</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #0c0e1a 0%, #1a1c2e 50%, #0c0e1a 100%);
+    overflow: hidden;
+    height: 100vh;
+    color: #e0e0e0;
+    user-select: none;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    z-index: 10;
+}
+
+.header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+}
+
+.timer {
+    font-size: 28px;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    color: #94a3b8;
+    min-width: 120px;
+    text-align: center;
+}
+
+.canvas-container {
+    flex: 1;
+    position: relative;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 24px;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 10;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 10px 22px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    color: #c8d0e0;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    outline: none;
+}
+
+.btn:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.2);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn.primary {
+    background: linear-gradient(135deg, rgba(96,165,250,0.25), rgba(167,139,250,0.25));
+    border-color: rgba(96,165,250,0.3);
+}
+
+.btn.primary:hover {
+    background: linear-gradient(135deg, rgba(96,165,250,0.4), rgba(167,139,250,0.4));
+    border-color: rgba(96,165,250,0.5);
+}
+
+.move-count {
+    font-size: 14px;
+    color: #64748b;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.move-count span {
+    color: #a78bfa;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.hint {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 20px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    font-size: 13px;
+    color: #94a3b8;
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.5s;
+    z-index: 5;
+}
+
+.hint.hidden {
+    opacity: 0;
+}
+
+.face-buttons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.face-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: #c8d0e0;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+}
+
+.face-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    transform: scale(1.08);
+}
+
+.face-btn:active {
+    transform: scale(0.95);
+}
+
+.face-btn[data-color="U"] { border-color: rgba(255,255,255,0.4); }
+.face-btn[data-color="D"] { border-color: rgba(255,220,0,0.5); }
+.face-btn[data-color="F"] { border-color: rgba(0,200,83,0.5); }
+.face-btn[data-color="B"] { border-color: rgba(0,120,255,0.5); }
+.face-btn[data-color="L"] { border-color: rgba(255,120,0,0.5); }
+.face-btn[data-color="R"] { border-color: rgba(220,50,50,0.5); }
+
+.separator {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.08);
+    margin: 0 4px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <div class="header">
+        <h1>3D 魔方</h1>
+        <div class="timer" id="timer">00:00.0</div>
+        <div class="move-count">步数: <span id="moveCount">0</span></div>
+    </div>
+    <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+        <div class="hint" id="hint">拖拽旋转整个魔方 · 按住 Shift + 拖拽旋转某一面</div>
+    </div>
+    <div class="controls">
+        <div class="face-buttons">
+            <button class="face-btn" data-color="U" onclick="doFaceMove('U')">U</button>
+            <button class="face-btn" data-color="D" onclick="doFaceMove('D')">D</button>
+            <button class="face-btn" data-color="F" onclick="doFaceMove('F')">F</button>
+            <button class="face-btn" data-color="B" onclick="doFaceMove('B')">B</button>
+            <button class="face-btn" data-color="L" onclick="doFaceMove('L')">L</button>
+            <button class="face-btn" data-color="R" onclick="doFaceMove('R')">R</button>
+            <div class="separator"></div>
+            <button class="face-btn" data-color="U" onclick="doFaceMove('U\'')">U'</button>
+            <button class="face-btn" data-color="D" onclick="doFaceMove('D\'')">D'</button>
+            <button class="face-btn" data-color="F" onclick="doFaceMove('F\'')">F'</button>
+            <button class="face-btn" data-color="B" onclick="doFaceMove('B\'')">B'</button>
+            <button class="face-btn" data-color="L" onclick="doFaceMove('L\'')">L'</button>
+            <button class="face-btn" data-color="R" onclick="doFaceMove('R\'')">R'</button>
+        </div>
+        <div class="separator"></div>
+        <button class="btn primary" onclick="scrambleCube()">打乱</button>
+        <button class="btn" onclick="resetCube()">还原</button>
+    </div>
+</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('canvas');
+const container = canvas.parentElement;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(5.5, 4.5, 5.5);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+scene.add(ambientLight);
+const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight1.position.set(5, 8, 6);
+scene.add(dirLight1);
+const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+dirLight2.position.set(-4, -2, -5);
+scene.add(dirLight2);
+
+const COLORS = {
+    right:  0xB71234,
+    left:   0xFF5800,
+    top:    0xFFFFFF,
+    bottom: 0xFFD500,
+    front:  0x009B48,
+    back:   0x0046AD,
+    inner:  0x1a1a2e
+};
+
+const cubeGroup = new THREE.Group();
+scene.add(cubeGroup);
+
+const cubies = [];
+const GAP = 0.04;
+const SIZE = 1 - GAP;
+
+function createRoundedBoxGeometry(w, h, d, r, s) {
+    const shape = new THREE.Shape();
+    const hw = w / 2 - r;
+    const hh = h / 2 - r;
+    shape.moveTo(-hw, -h / 2);
+    shape.lineTo(hw, -h / 2);
+    shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -hh);
+    shape.lineTo(w / 2, hh);
+    shape.quadraticCurveTo(w / 2, h / 2, hw, h / 2);
+    shape.lineTo(-hw, h / 2);
+    shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, hh);
+    shape.lineTo(-w / 2, -hh);
+    shape.quadraticCurveTo(-w / 2, -h / 2, -hw, -h / 2);
+
+    const extrudeSettings = { depth: d - 2 * r, bevelEnabled: true, bevelSize: r, bevelThickness: r, bevelSegments: s };
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.center();
+    return geo;
+}
+
+const roundedGeo = createRoundedBoxGeometry(SIZE, SIZE, SIZE, 0.08, 3);
+
+function createCubie(x, y, z) {
+    const materials = [];
+
+    const faceInfo = [
+        { axis: 'x', sign: 1, color: COLORS.right },
+        { axis: 'x', sign: -1, color: COLORS.left },
+        { axis: 'y', sign: 1, color: COLORS.top },
+        { axis: 'y', sign: -1, color: COLORS.bottom },
+        { axis: 'z', sign: 1, color: COLORS.front },
+        { axis: 'z', sign: -1, color: COLORS.back }
+    ];
+
+    for (let i = 0; i < 6; i++) {
+        const info = faceInfo[i];
+        const isOuter = (info.axis === 'x' && info.sign === 1 && x === 1) ||
+                        (info.axis === 'x' && info.sign === -1 && x === -1) ||
+                        (info.axis === 'y' && info.sign === 1 && y === 1) ||
+                        (info.axis === 'y' && info.sign === -1 && y === -1) ||
+                        (info.axis === 'z' && info.sign === 1 && z === 1) ||
+                        (info.axis === 'z' && info.sign === -1 && z === -1);
+
+        materials.push(new THREE.MeshStandardMaterial({
+            color: isOuter ? info.color : COLORS.inner,
+            roughness: isOuter ? 0.35 : 0.8,
+            metalness: isOuter ? 0.05 : 0.0
+        }));
+    }
+
+    const mesh = new THREE.Mesh(roundedGeo, materials);
+    mesh.position.set(x, y, z);
+    mesh.userData = { x, y, z };
+    cubeGroup.add(mesh);
+    cubies.push(mesh);
+    return mesh;
+}
+
+for (let x = -1; x <= 1; x++) {
+    for (let y = -1; y <= 1; y++) {
+        for (let z = -1; z <= 1; z++) {
+            createCubie(x, y, z);
+        }
+    }
+}
+
+function getCubieGridPos(cubie) {
+    const p = cubie.position.clone();
+    cubeGroup.localToWorld(p);
+    const inv = new THREE.Matrix4().copy(cubeGroup.matrixWorld).invert();
+    p.applyMatrix4(inv);
+    return {
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        z: Math.round(p.z)
+    };
+}
+
+function resize() {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+}
+window.addEventListener('resize', resize);
+resize();
+
+let isAnimating = false;
+let animQueue = [];
+
+function animateCube(axis, layer, direction, callback) {
+    if (isAnimating) {
+        animQueue.push({ axis, layer, direction, callback });
+        return;
+    }
+    isAnimating = true;
+
+    const targetCubies = cubies.filter(c => {
+        const pos = getCubieGridPos(c);
+        if (axis === 'x') return pos.x === layer;
+        if (axis === 'y') return pos.y === layer;
+        if (axis === 'z') return pos.z === layer;
+        return false;
+    });
+
+    const pivot = new THREE.Group();
+    cubeGroup.add(pivot);
+
+    targetCubies.forEach(c => {
+        cubeGroup.remove(c);
+        pivot.add(c);
+    });
+
+    const angle = (Math.PI / 2) * direction;
+    const rotAxis = new THREE.Vector3(
+        axis === 'x' ? 1 : 0,
+        axis === 'y' ? 1 : 0,
+        axis === 'z' ? 1 : 0
+    );
+
+    const duration = 250;
+    const startTime = performance.now();
+    const startQuat = pivot.quaternion.clone();
+    const endQuat = new THREE.Quaternion().setFromAxisAngle(rotAxis, angle).multiply(startQuat);
+
+    function tick(now) {
+        let t = Math.min((now - startTime) / duration, 1);
+        t = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+        pivot.quaternion.slerpQuaternions(startQuat, endQuat, t);
+
+        if (t < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            pivot.updateMatrixWorld();
+            targetCubies.forEach(c => {
+                c.applyMatrix4(pivot.matrixWorld);
+                const parentInv = new THREE.Matrix4().copy(cubeGroup.matrixWorld).invert();
+                c.applyMatrix4(parentInv);
+                c.position.x = Math.round(c.position.x);
+                c.position.y = Math.round(c.position.y);
+                c.position.z = Math.round(c.position.z);
+                cubeGroup.add(c);
+            });
+            cubeGroup.remove(pivot);
+            isAnimating = false;
+
+            if (callback) callback();
+
+            if (animQueue.length > 0) {
+                const next = animQueue.shift();
+                animateCube(next.axis, next.layer, next.direction, next.callback);
+            }
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+const MOVES = {
+    'U':  { axis: 'y', layer:  1, dir:  1 },
+    'U\'': { axis: 'y', layer:  1, dir: -1 },
+    'D':  { axis: 'y', layer: -1, dir: -1 },
+    'D\'': { axis: 'y', layer: -1, dir:  1 },
+    'R':  { axis: 'x', layer:  1, dir: -1 },
+    'R\'': { axis: 'x', layer:  1, dir:  1 },
+    'L':  { axis: 'x', layer: -1, dir:  1 },
+    'L\'': { axis: 'x', layer: -1, dir: -1 },
+    'F':  { axis: 'z', layer:  1, dir: -1 },
+    'F\'': { axis: 'z', layer:  1, dir:  1 },
+    'B':  { axis: 'z', layer: -1, dir:  1 },
+    'B\'': { axis: 'z', layer: -1, dir: -1 },
+    'M':  { axis: 'x', layer:  0, dir:  1 },
+    'M\'': { axis: 'x', layer:  0, dir: -1 },
+    'E':  { axis: 'y', layer:  0, dir: -1 },
+    'E\'': { axis: 'y', layer:  0, dir:  1 },
+    'S':  { axis: 'z', layer:  0, dir: -1 },
+    'S\'': { axis: 'z', layer:  0, dir:  1 },
+};
+
+let moveCount = 0;
+let timerInterval = null;
+let startTime = 0;
+let timerStarted = false;
+
+function updateMoveCount() {
+    document.getElementById('moveCount').textContent = moveCount;
+}
+
+function startTimer() {
+    if (timerStarted) return;
+    timerStarted = true;
+    startTime = performance.now();
+    timerInterval = setInterval(() => {
+        const elapsed = performance.now() - startTime;
+        const mins = Math.floor(elapsed / 60000);
+        const secs = Math.floor((elapsed % 60000) / 1000);
+        const tenths = Math.floor((elapsed % 1000) / 100);
+        document.getElementById('timer').textContent =
+            `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+    }, 100);
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerStarted = false;
+}
+
+function resetTimer() {
+    stopTimer();
+    document.getElementById('timer').textContent = '00:00.0';
+}
+
+function executeMove(moveName, callback) {
+    const m = MOVES[moveName];
+    if (!m) return;
+    moveCount++;
+    updateMoveCount();
+    animateCube(m.axis, m.layer, m.dir, callback);
+}
+
+window.doFaceMove = function(name) {
+    if (!timerStarted && moveCount === 0) startTimer();
+    executeMove(name);
+};
+
+let scrambleSequence = [];
+window.scrambleCube = function() {
+    resetTimer();
+    moveCount = 0;
+    updateMoveCount();
+
+    const faces = ['U', 'D', 'R', 'L', 'F', 'B'];
+    const moves = [];
+    let lastFace = '';
+    for (let i = 0; i < 20; i++) {
+        let face;
+        do {
+            face = faces[Math.floor(Math.random() * faces.length)];
+        } while (face === lastFace);
+        lastFace = face;
+        const suffix = ['', '\''][Math.floor(Math.random() * 2)];
+        moves.push(face + suffix);
+    }
+    scrambleSequence = moves;
+
+    let i = 0;
+    function doNext() {
+        if (i < moves.length) {
+            const m = MOVES[moves[i]];
+            moveCount = 0;
+            animateCube(m.axis, m.layer, m.dir, () => {
+                i++;
+                doNext();
+            });
+        } else {
+            moveCount = 0;
+            updateMoveCount();
+            startTimer();
+        }
+    }
+    doNext();
+};
+
+window.resetCube = function() {
+    while (cubeGroup.children.length > 0) {
+        cubeGroup.remove(cubeGroup.children[0]);
+    }
+    cubies.length = 0;
+
+    for (let x = -1; x <= 1; x++) {
+        for (let y = -1; y <= 1; y++) {
+            for (let z = -1; z <= 1; z++) {
+                createCubie(x, y, z);
+            }
+        }
+    }
+    cubeGroup.quaternion.identity();
+    moveCount = 0;
+    updateMoveCount();
+    resetTimer();
+    animQueue = [];
+    isAnimating = false;
+};
+
+let isDragging = false;
+let isFaceDrag = false;
+let dragStart = { x: 0, y: 0 };
+let cubeRotX = 0.5;
+let cubeRotY = -0.6;
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function getIntersection(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    return raycaster.intersectObjects(cubies);
+}
+
+let faceDragData = null;
+
+canvas.addEventListener('mousedown', (e) => {
+    if (isAnimating) return;
+    dragStart.x = e.clientX;
+    dragStart.y = e.clientY;
+
+    if (e.shiftKey) {
+        const hits = getIntersection(e);
+        if (hits.length > 0) {
+            isFaceDrag = true;
+            const hit = hits[0];
+            const face = hit.face;
+            const cubiePos = getCubieGridPos(hit.object);
+            const normal = face.normal.clone();
+
+            const worldNormal = normal.clone().applyMatrix3(
+                new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)
+            ).normalize();
+
+            faceDragData = {
+                cubie: hit.object,
+                point: hit.point.clone(),
+                normal: worldNormal,
+                gridPos: cubiePos,
+                startX: e.clientX,
+                startY: e.clientY
+            };
+        }
+    }
+    isDragging = true;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+
+    if (isFaceDrag && faceDragData) {
+        const movedDist = Math.sqrt(
+            (e.clientX - faceDragData.startX) ** 2 +
+            (e.clientY - faceDragData.startY) ** 2
+        );
+        if (movedDist > 15 && !faceDragData.resolved) {
+            faceDragData.resolved = true;
+            resolveFaceDrag(e);
+        }
+    } else if (!isFaceDrag) {
+        cubeRotY += dx * 0.008;
+        cubeRotX += dy * 0.008;
+        cubeRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cubeRotX));
+        dragStart.x = e.clientX;
+        dragStart.y = e.clientY;
+    }
+});
+
+canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+    isFaceDrag = false;
+    faceDragData = null;
+});
+
+canvas.addEventListener('mouseleave', () => {
+    isDragging = false;
+    isFaceDrag = false;
+    faceDragData = null;
+});
+
+function resolveFaceDrag(e) {
+    const fd = faceDragData;
+    const dx = e.clientX - fd.startX;
+    const dy = e.clientY - fd.startY;
+    const gp = fd.gridPos;
+    const n = fd.normal;
+
+    let moveName = null;
+
+    if (Math.abs(n.y) > 0.8) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (n.y > 0) {
+                moveName = dx > 0 ? 'U' : 'U\'';
+            } else {
+                moveName = dx > 0 ? 'D' : 'D\'';
+            }
+        } else {
+            if (n.y > 0) {
+                moveName = dx > 0 ? 'U' : 'U\'';
+            } else {
+                moveName = dx > 0 ? 'D' : 'D\'';
+            }
+        }
+    } else if (Math.abs(n.z) > 0.8) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (n.z > 0) {
+                moveName = dx > 0 ? 'F' : 'F\'';
+            } else {
+                moveName = dx > 0 ? 'B\'': 'B';
+            }
+        } else {
+            moveName = dy < 0 ? (gp.x > 0 ? 'R' : (gp.x < 0 ? 'L' : 'M')) :
+                       (gp.x > 0 ? 'R\'' : (gp.x < 0 ? 'L\'' : 'M\''));
+        }
+    } else if (Math.abs(n.x) > 0.8) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (n.x > 0) {
+                moveName = dx > 0 ? 'R' : 'R\'';
+            } else {
+                moveName = dx > 0 ? 'L\'' : 'L';
+            }
+        } else {
+            if (n.x > 0) {
+                moveName = dy < 0 ? 'R\'' : 'R';
+            } else {
+                moveName = dy < 0 ? 'L' : 'L\'';
+            }
+        }
+    }
+
+    if (moveName && MOVES[moveName]) {
+        if (!timerStarted && moveCount === 0) startTimer();
+        executeMove(moveName);
+    }
+}
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    dragStart.x = t.clientX;
+    dragStart.y = t.clientY;
+    isDragging = true;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isDragging) return;
+    const t = e.touches[0];
+    const dx = t.clientX - dragStart.x;
+    const dy = t.clientY - dragStart.y;
+    cubeRotY += dx * 0.008;
+    cubeRotX += dy * 0.008;
+    cubeRotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cubeRotX));
+    dragStart.x = t.clientX;
+    dragStart.y = t.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+    isDragging = false;
+});
+
+const q = new THREE.Quaternion();
+const euler = new THREE.Euler();
+
+function animate() {
+    requestAnimationFrame(animate);
+    if (!isDragging || isFaceDrag) {
+        cubeRotY += 0.001;
+    }
+    euler.set(cubeRotX, cubeRotY, 0, 'YXZ');
+    q.setFromEuler(euler);
+    cubeGroup.quaternion.slerp(q, isDragging ? 1 : 0.08);
+    renderer.render(scene, camera);
+}
+animate();
+
+document.getElementById('hint').classList.remove('hidden');
+setTimeout(() => {
+    document.getElementById('hint').classList.add('hidden');
+}, 5000);
+</script>
+</body>
+</html>
